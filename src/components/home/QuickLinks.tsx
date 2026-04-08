@@ -25,14 +25,15 @@ export function QuickLinks() {
             to={item.href}
             className={cn(
               'flex items-start gap-4 p-4 rounded-2xl border border-border bg-bg-card',
-              'hover:border-accent-primary/40 hover:bg-accent-primary/5 transition-all group'
+              'hover:border-accent-primary/50 hover:bg-accent-primary/5 hover:shadow-glow-violet',
+              'hover:-translate-y-1 transition-all duration-300 group'
             )}
           >
-            <div className="p-2.5 rounded-xl bg-white/5 border border-border group-hover:border-accent-primary/30">
-              <item.icon className="w-5 h-5 text-accent-primary" />
+            <div className="p-2.5 rounded-xl bg-white/5 border border-border group-hover:border-accent-primary/40 group-hover:bg-accent-primary/10 transition-all duration-300">
+              <item.icon className="w-5 h-5 text-accent-primary group-hover:animate-icon-pulse" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-text-primary">{item.label}</h3>
+              <h3 className="font-display font-bold text-text-primary group-hover:text-accent-primary transition-colors">{item.label}</h3>
               <p className="text-sm text-text-secondary">{item.desc}</p>
             </div>
           </Link>

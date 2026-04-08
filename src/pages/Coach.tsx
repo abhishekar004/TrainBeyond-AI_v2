@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Send, Loader2, Trash2, MessageCircle } from 'lucide-react';
+import { Send, Loader2, Trash2, MessageCircle, Dumbbell, Apple, Heart, Zap, HelpCircle, Bot } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchCoachHistory, sendCoachMessage, clearCoachHistory } from '@/services/coach.service';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,23 @@ import { toast } from 'sonner';
 const QUICK_PROMPTS = [
   { label: 'Tired today', text: "I'm feeling tired — how should I adjust today's training?" },
   { label: 'Diet help', text: 'Give me one high-protein Indian meal idea that fits a busy workday.' },
-  { label: 'Motivation', text: "I'm losing motivation. What’s a small win I can chase this week?" },
+  { label: 'Motivation', text: "I'm losing motivation. What's a small win I can chase this week?" },
   { label: 'Leg day', text: 'Outline a smart leg day warmup and top 3 compound lifts with rep ranges.' },
+];
+
+const CAPABILITIES = [
+  { icon: Dumbbell, label: 'Workout questions', color: 'text-accent-primary' },
+  { icon: HelpCircle, label: 'Exercise substitutions', color: 'text-violet-400' },
+  { icon: Heart, label: 'Recovery advice', color: 'text-pink-400' },
+  { icon: Apple, label: 'Diet guidance', color: 'text-emerald-400' },
+  { icon: Zap, label: 'Motivation', color: 'text-amber-400' },
+];
+
+const STARTER_CARDS = [
+  { text: "What should I train if I'm sore?", icon: '💪' },
+  { text: 'Help me eat more protein', icon: '🥩' },
+  { text: 'Can you simplify my workout?', icon: '✨' },
+  { text: 'What should I do on rest day?', icon: '🧘' },
 ];
 
 export function Coach() {
@@ -66,6 +81,24 @@ export function Coach() {
           </p>
         </div>
 
+        {/* Intro Panel */}
+        <div className="rounded-2xl border border-accent-primary/20 bg-gradient-to-br from-accent-primary/[0.06] via-bg-card to-bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent-secondary mb-3">
+            Your AI Coach can help with
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {CAPABILITIES.map((cap) => (
+              <span
+                key={cap.label}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-border text-text-primary"
+              >
+                <cap.icon className={`w-3.5 h-3.5 ${cap.color}`} />
+                {cap.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {QUICK_PROMPTS.map((p) => (
             <Button
@@ -96,7 +129,41 @@ export function Coach() {
               ) : (
                 <div className="space-y-3">
                   {messages.length === 0 && (
-                    <p className="text-text-secondary text-sm">Ask anything training- or nutrition-related.</p>
+                    /* Premium empty chat state */
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="relative mb-5">
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent-primary/20 to-accent-secondary/20 border border-accent-primary/20 flex items-center justify-center shadow-glow-violet">
+                          <Bot className="w-10 h-10 text-accent-primary" />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-accent-secondary flex items-center justify-center">
+                          <Zap className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      </div>
+                      <h3 className="font-display font-bold text-lg text-text-primary mb-1">
+                        Hey! I'm your AI Coach
+                      </h3>
+                      <p className="text-sm text-text-secondary max-w-xs mb-6">
+                        Ask me anything about training, nutrition, or recovery. I'm here to help you train smarter.
+                      </p>
+
+                      {/* Starter suggestion cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
+                        {STARTER_CARDS.map((card) => (
+                          <button
+                            key={card.text}
+                            type="button"
+                            disabled={sendMut.isPending}
+                            onClick={() => sendMut.mutate(card.text)}
+                            className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-white/[0.03] text-left text-sm text-text-primary hover:border-accent-primary/40 hover:bg-accent-primary/5 hover:shadow-glow-violet/20 transition-all duration-200 group"
+                          >
+                            <span className="text-lg">{card.icon}</span>
+                            <span className="text-text-secondary group-hover:text-text-primary transition-colors">
+                              {card.text}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                   {messages.map((m) => (
                     <motion.div

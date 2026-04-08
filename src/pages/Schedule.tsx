@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isBefore, startOfDay } from 'date-fns';
-import { CalendarCheck, AlertCircle } from 'lucide-react';
+import { CalendarCheck, AlertCircle, Flame, Dumbbell, Wind } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlans } from '@/hooks/usePlans';
 import { fetchCompletionsForRange, toggleCompletion } from '@/services/schedule.service';
@@ -35,6 +35,20 @@ function buildRowsForPlan(plan: SavedPlan | null): ScheduleRow[] {
       workoutDay: pday,
     };
   });
+}
+
+function StatusChip({ status }: { status: 'completed' | 'missed' | 'upcoming' }) {
+  const styles = {
+    completed: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+    missed: 'bg-red-500/15 text-red-400 border-red-500/25',
+    upcoming: 'bg-white/5 text-text-secondary border-border',
+  };
+  const labels = { completed: 'Completed', missed: 'Missed', upcoming: 'Upcoming' };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${styles[status]}`}>
+      {labels[status]}
+    </span>
+  );
 }
 
 export function Schedule() {
@@ -95,6 +109,14 @@ export function Schedule() {
     onError: () => toast.error('Could not update completion'),
   });
 
+  function getStatus(row: ScheduleRow): 'completed' | 'missed' | 'upcoming' {
+    const key = `${row.date}|${row.dayKey}`;
+    const done = completionMap.get(key) ?? false;
+    if (done) return 'completed';
+    if (row.date < today) return 'missed';
+    return 'upcoming';
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary py-8 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -142,7 +164,7 @@ export function Schedule() {
               {selectedPlan ? selectedPlan.title : isLoading ? 'Loading plans…' : 'Save a plan from the planner first.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {!selectedPlan && !isLoading && (
               <Button asChild variant="secondary">
                 <Link to="/planner">Go to planner</Link>
@@ -152,50 +174,94 @@ export function Schedule() {
               const key = `${r.date}|${r.dayKey}`;
               const done = completionMap.get(key) ?? false;
               const isPast = r.date < today;
+              const status = getStatus(r);
+
               return (
                 <div
                   key={key}
                   className={cn(
-                    'flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border p-4',
-                    done && 'border-accent-secondary/40 bg-accent-secondary/5'
+                    'rounded-xl border p-4 transition-all',
+                    status === 'completed' && 'border-emerald-500/30 bg-emerald-500/[0.04]',
+                    status === 'missed' && 'border-red-500/20 bg-red-500/[0.03]',
+                    status === 'upcoming' && 'border-border'
                   )}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display font-bold text-text-primary">
-                      {r.label}{' '}
-                      <span className="text-text-secondary font-normal text-sm">({r.date})</span>
-                    </p>
-                    <p className="text-sm font-medium text-accent-primary/90 mt-0.5">{r.focus}</p>
-                    {(r.workoutDay.exercises?.length ?? 0) > 0 && (
-                      <ul className="mt-3 space-y-1.5 text-xs text-text-secondary border-t border-border/60 pt-3">
-                        {r.workoutDay.exercises.map((ex, idx) => (
-                          <li key={`${ex.name}-${idx}`} className="leading-snug">
-                            <span className="text-text-primary font-medium">{ex.name}</span>
-                            <span className="text-text-secondary">
-                              {' '}
-                              — {ex.sets} sets × {ex.reps}
-                              {ex.rest ? ` · rest ${ex.rest}` : ''}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {r.workoutDay.warmup?.length > 0 && (
-                      <p className="text-[11px] text-text-secondary mt-2">
-                        Warm-up: {r.workoutDay.warmup.length} moves · Cool-down:{' '}
-                        {r.workoutDay.cooldown?.length ?? 0} moves
+                  {/* Day header with status chip */}
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="font-display font-bold text-text-primary">
+                        {r.label}{' '}
+                        <span className="text-text-secondary font-normal text-sm">({r.date})</span>
                       </p>
+                      <p className="text-sm font-medium text-accent-primary/90 mt-0.5">{r.focus}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusChip status={status} />
+                    </div>
+                  </div>
+
+                  {/* Structured sections */}
+                  <div className="space-y-3">
+                    {/* Warm-up */}
+                    {r.workoutDay.warmup?.length > 0 && (
+                      <div className="pl-3 border-l-2 border-accent-secondary/30">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-accent-secondary mb-1 flex items-center gap-1">
+                          <Flame className="w-3 h-3" />
+                          Warm-up
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          {r.workoutDay.warmup.join(' · ')}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Exercises */}
+                    {(r.workoutDay.exercises?.length ?? 0) > 0 && (
+                      <div className="pl-3 border-l-2 border-accent-primary/30">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-accent-primary mb-1.5 flex items-center gap-1">
+                          <Dumbbell className="w-3 h-3" />
+                          Exercises
+                        </p>
+                        <ul className="space-y-1">
+                          {r.workoutDay.exercises.map((ex, idx) => (
+                            <li key={`${ex.name}-${idx}`} className="text-xs leading-snug">
+                              <span className="text-text-primary font-medium">{ex.name}</span>
+                              <span className="text-text-secondary font-stat">
+                                {' '}— {ex.sets} sets × {ex.reps}
+                                {ex.rest ? ` · rest ${ex.rest}` : ''}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Cooldown */}
+                    {r.workoutDay.cooldown?.length > 0 && (
+                      <div className="pl-3 border-l-2 border-blue-400/30">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-400 mb-1 flex items-center gap-1">
+                          <Wind className="w-3 h-3" />
+                          Cooldown
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          {r.workoutDay.cooldown.join(' · ')}
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <Button
-                    type="button"
-                    variant={done ? 'secondary' : 'default'}
-                    size="sm"
-                    disabled={mut.isPending}
-                    onClick={() => mut.mutate({ date: r.date, dayKey: r.dayKey, completed: !done })}
-                  >
-                    {done ? 'Completed ✓' : isPast ? 'Log missed → done' : 'Mark complete'}
-                  </Button>
+
+                  {/* Action button */}
+                  <div className="mt-3 pt-3 border-t border-border/40">
+                    <Button
+                      type="button"
+                      variant={done ? 'secondary' : 'default'}
+                      size="sm"
+                      disabled={mut.isPending}
+                      onClick={() => mut.mutate({ date: r.date, dayKey: r.dayKey, completed: !done })}
+                    >
+                      {done ? 'Completed ✓' : isPast ? 'Log missed → done' : 'Mark complete'}
+                    </Button>
+                  </div>
                 </div>
               );
             })}

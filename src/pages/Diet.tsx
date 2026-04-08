@@ -14,6 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { Bookmark, Shuffle, Sparkles, Coffee, Sun, Cookie, Moon } from 'lucide-react';
+
+const CALORIE_SPLIT = [
+  { label: 'Breakfast', percent: 25, icon: Coffee, color: 'bg-violet-500' },
+  { label: 'Lunch', percent: 35, icon: Sun, color: 'bg-accent-primary' },
+  { label: 'Snack', percent: 15, icon: Cookie, color: 'bg-accent-secondary' },
+  { label: 'Dinner', percent: 25, icon: Moon, color: 'bg-blue-500' },
+];
 
 export function Diet() {
   const { user } = useAuth();
@@ -153,24 +161,64 @@ export function Diet() {
                   </label>
                 </div>
 
+                {/* Stats row */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="rounded-xl border border-border bg-white/5 p-4">
                     <p className="text-xs text-text-secondary">BMR</p>
-                    <p className="font-display text-xl font-bold text-text-primary">{Math.round(bmr)}</p>
+                    <p className="font-display text-xl font-bold text-text-primary font-stat">{Math.round(bmr)}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-white/5 p-4">
                     <p className="text-xs text-text-secondary">TDEE</p>
-                    <p className="font-display text-xl font-bold text-accent-primary">{tdee}</p>
+                    <p className="font-display text-xl font-bold text-accent-primary font-stat">{tdee}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-white/5 p-4">
                     <p className="text-xs text-text-secondary">Target kcal</p>
-                    <p className="font-display text-xl font-bold text-accent-secondary">{macros.calories}</p>
+                    <p className="font-display text-xl font-bold text-accent-secondary font-stat">{macros.calories}</p>
                   </div>
-                  <div className="rounded-xl border border-accent-primary/20 bg-accent-primary/5 p-4 sm:col-span-2 lg:col-span-1">
-                    <p className="text-xs text-text-secondary">Macros (g)</p>
-                    <p className="text-sm font-semibold text-text-primary mt-1">
-                      P {macros.proteinG} · C {macros.carbsG} · F {macros.fatG}
-                    </p>
+
+                  {/* Enhanced Macros Card */}
+                  <div className="rounded-xl border border-accent-primary/25 bg-accent-primary/[0.08] p-4 sm:col-span-2 lg:col-span-1 shadow-glow-violet/20">
+                    <p className="text-xs text-text-secondary mb-2">Macros (g)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-stat">
+                        P {macros.proteinG}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/25 font-stat">
+                        C {macros.carbsG}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 font-stat">
+                        F {macros.fatG}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Suggested Calorie Split */}
+                <div className="rounded-xl border border-border bg-white/[0.03] p-4">
+                  <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+                    Suggested Calorie Split
+                  </p>
+                  <div className="space-y-2.5">
+                    {CALORIE_SPLIT.map((item) => {
+                      const kcal = Math.round((macros.calories * item.percent) / 100);
+                      return (
+                        <div key={item.label} className="flex items-center gap-3">
+                          <item.icon className="w-4 h-4 text-text-secondary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-text-primary font-medium">{item.label}</span>
+                              <span className="text-text-secondary font-stat">{item.percent}% · {kcal} kcal</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${item.color} transition-all duration-500`}
+                                style={{ width: `${item.percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -181,6 +229,22 @@ export function Diet() {
             </Card>
           </TabsContent>
           <TabsContent value="meals">
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button type="button" variant="secondary" size="sm" onClick={() => toast.success('Meal saved! (Demo)')}>
+                <Bookmark className="w-3.5 h-3.5" />
+                Save Meal
+              </Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => toast.info('Shuffled! (Demo)')}>
+                <Shuffle className="w-3.5 h-3.5" />
+                Shuffle Ideas
+              </Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => toast.info('Generating more… (Demo)')}>
+                <Sparkles className="w-3.5 h-3.5" />
+                Generate More
+              </Button>
+            </div>
+
             <div className="grid gap-4">
               {INDIAN_MEAL_IDEAS.map((block) => (
                 <Card key={block.title}>

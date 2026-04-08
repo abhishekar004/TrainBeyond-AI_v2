@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, startOfWeek } from 'date-fns';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Trophy, Lock, Sparkles } from 'lucide-react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -15,12 +15,47 @@ import {
 } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { useGamification } from '@/hooks/useGamification';
+import { usePlans } from '@/hooks/usePlans';
 import { fetchCompletionsForRange } from '@/services/schedule.service';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { motion } from 'framer-motion';
+
+const ACHIEVEMENT_BADGES = [
+  {
+    id: 'first_workout',
+    label: 'First Workout',
+    desc: 'Complete your first scheduled workout',
+    icon: '🏋️',
+    threshold: 'Complete 1 workout',
+  },
+  {
+    id: 'streak_3',
+    label: '3-Day Streak',
+    desc: 'Train 3 days in a row',
+    icon: '🔥',
+    threshold: '3 consecutive days',
+  },
+  {
+    id: 'xp_500',
+    label: '100 XP',
+    desc: 'Earn your first 100 XP',
+    icon: '⚡',
+    threshold: 'Earn 100 XP',
+    checkXp: 100,
+  },
+  {
+    id: 'first_saved_plan',
+    label: 'First Saved Plan',
+    desc: 'Save your first AI-generated plan',
+    icon: '📋',
+    threshold: 'Save 1 plan',
+  },
+];
 
 export function Progress() {
   const { user } = useAuth();
   const { gamification } = useGamification();
+  const { plans } = usePlans();
 
   const end = format(new Date(), 'yyyy-MM-dd');
   const startDate = new Date();
@@ -58,6 +93,17 @@ export function Progress() {
       .map(([date, n]) => ({ date, n }))
       .slice(-21);
   }, [completedRows]);
+
+  // Determine which achievements are unlocked
+  const badges = gamification?.badges ?? [];
+  const xp = gamification?.xp ?? 0;
+
+  function isBadgeUnlocked(badge: (typeof ACHIEVEMENT_BADGES)[number]) {
+    if (badges.includes(badge.id)) return true;
+    if (badge.id === 'first_saved_plan' && plans.length > 0) return true;
+    if (badge.checkXp && xp >= badge.checkXp) return true;
+    return false;
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary py-8 px-4">
@@ -155,6 +201,53 @@ export function Progress() {
             )}
           </CardContent>
         </Card>
+
+        {/* Achievements Section */}
+        <div>
+          <h2 className="font-display font-bold text-xl text-text-primary flex items-center gap-2 mb-4">
+            <Trophy className="w-6 h-6 text-accent-primary" />
+            Achievements
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {ACHIEVEMENT_BADGES.map((badge, i) => {
+              const unlocked = isBadgeUnlocked(badge);
+              return (
+                <motion.div
+                  key={badge.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className={`relative rounded-2xl border p-5 text-center transition-all ${
+                    unlocked
+                      ? 'border-accent-primary/40 bg-gradient-to-br from-accent-primary/10 via-bg-card to-accent-secondary/5 shadow-glow-violet'
+                      : 'border-border bg-bg-card opacity-60'
+                  }`}
+                >
+                  {/* Lock overlay for locked badges */}
+                  {!unlocked && (
+                    <div className="absolute top-3 right-3">
+                      <Lock className="w-4 h-4 text-text-secondary/50" />
+                    </div>
+                  )}
+                  {unlocked && (
+                    <div className="absolute top-3 right-3">
+                      <Sparkles className="w-4 h-4 text-accent-primary" />
+                    </div>
+                  )}
+
+                  <div className="text-3xl mb-3">{badge.icon}</div>
+                  <h3 className={`font-display font-bold text-sm mb-1 ${unlocked ? 'text-text-primary' : 'text-text-secondary'}`}>
+                    {badge.label}
+                  </h3>
+                  <p className="text-xs text-text-secondary">{badge.desc}</p>
+                  <p className={`text-[10px] mt-2 ${unlocked ? 'text-accent-secondary font-semibold' : 'text-text-secondary/60'}`}>
+                    {unlocked ? '✓ Unlocked' : badge.threshold}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

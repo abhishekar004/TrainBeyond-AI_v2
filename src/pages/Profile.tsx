@@ -12,6 +12,8 @@ import {
   Dumbbell,
   ChevronRight,
   ClipboardList,
+  ChevronDown,
+  Edit3,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut, syncAuthDisplayName } from '@/services/auth.service';
@@ -36,6 +38,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { format } from 'date-fns';
+import { ImageCropperModal } from '@/components/profile/ImageCropperModal';
 
 const GOAL_OPTIONS = [
   'Lose fat',
@@ -105,6 +108,12 @@ export function Profile() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activityTab, setActivityTab] = useState('metrics');
+  const [trainingOpen, setTrainingOpen] = useState(true);
+  const [bodyOpen, setBodyOpen] = useState(true);
+  const [bioOpen, setBioOpen] = useState(true);
+  const isEditMode = activityTab === 'metrics';
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!profile) return;
@@ -153,22 +162,39 @@ export function Profile() {
     setFitnessGoals((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   };
 
-  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be selected again
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!user) return;
+    setCropImageSrc(null);
     setUploading(true);
     try {
+      const file = new File([croppedBlob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const url = await uploadAvatarFile(user.id, file);
       setAvatarUrl(url);
-      toast.success('Photo uploaded — save profile to keep it.');
+      
+      // Auto-save the avatar URL immediately so it persists on reload
+      await saveFullProfile(user.id, {
+        avatar_url: url
+      });
+      await refresh();
+      
+      toast.success('Photo uploaded and profile updated!');
     } catch (err) {
       console.error(err);
-      toast.error(
-        'Upload failed. Create a public `avatars` bucket in Supabase Storage, or paste an image URL below.'
-      );
+      toast.error('Upload failed. Check if bucket exists and try again.');
     } finally {
       setUploading(false);
-      e.target.value = '';
     }
   };
 
@@ -337,13 +363,21 @@ export function Profile() {
           </motion.aside>
 
           <div className="space-y-6 min-w-0">
-            <div>
-              <h2 className="font-display font-semibold text-xl text-text-primary">Your Activity</h2>
-              <p className="text-sm text-text-secondary">Track your workouts and progress.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-semibold text-xl text-text-primary">Your Activity</h2>
+                <p className="text-sm text-text-secondary">Track your workouts and progress.</p>
+              </div>
+              {isEditMode && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-accent-primary/10 border border-accent-primary/20 text-accent-primary">
+                  <Edit3 className="w-3 h-3" />
+                  Editing
+                </span>
+              )}
             </div>
 
             <Tabs value={activityTab} onValueChange={setActivityTab} className="w-full">
-              <TabsList className="flex flex-wrap h-auto gap-1 p-1 w-full justify-start">
+              <TabsList className="flex flex-wrap h-auto gap-1 p-1 w-full justify-start sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm rounded-xl">
                 <TabsTrigger value="workouts" className="text-xs sm:text-sm">
                   Your Workouts
                 </TabsTrigger>
@@ -527,10 +561,16 @@ export function Profile() {
                 </Card>
 
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Training</CardTitle>
-                    <CardDescription>Goals and difficulty help tune AI insights and plans.</CardDescription>
+                  <CardHeader className="cursor-pointer" onClick={() => setTrainingOpen((v) => !v)}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Training</CardTitle>
+                        <CardDescription>Goals and difficulty help tune AI insights and plans.</CardDescription>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${trainingOpen ? 'rotate-180' : ''}`} />
+                    </div>
                   </CardHeader>
+                  {!trainingOpen ? null : (
                   <CardContent className="space-y-4">
                     <div>
                       <p className="text-xs text-text-secondary mb-2">Fitness goals</p>
@@ -592,13 +632,20 @@ export function Profile() {
                       />
                     </label>
                   </CardContent>
+                  )}
                 </Card>
 
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Body &amp; activity</CardTitle>
-                    <CardDescription>Used for BMI, diet calculator, and history graph.</CardDescription>
+                  <CardHeader className="cursor-pointer" onClick={() => setBodyOpen((v) => !v)}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Body &amp; activity</CardTitle>
+                        <CardDescription>Used for BMI, diet calculator, and history graph.</CardDescription>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${bodyOpen ? 'rotate-180' : ''}`} />
+                    </div>
                   </CardHeader>
+                  {!bodyOpen ? null : (
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                       <label className="text-xs text-text-secondary col-span-2 sm:col-span-1">
@@ -658,12 +705,17 @@ export function Profile() {
                       </label>
                     </div>
                   </CardContent>
+                  )}
                 </Card>
 
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Bio</CardTitle>
+                  <CardHeader className="cursor-pointer" onClick={() => setBioOpen((v) => !v)}>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Bio</CardTitle>
+                      <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${bioOpen ? 'rotate-180' : ''}`} />
+                    </div>
                   </CardHeader>
+                  {!bioOpen ? null : (
                   <CardContent>
                     <textarea
                       value={bio}
@@ -674,6 +726,7 @@ export function Profile() {
                     />
                     <p className="text-xs text-text-secondary mt-1">{bio.length}/500</p>
                   </CardContent>
+                  )}
                 </Card>
 
                 <Button type="button" className="w-full" onClick={handleSave} disabled={saving}>
@@ -690,6 +743,14 @@ export function Profile() {
           </div>
         </div>
       </div>
+
+      {cropImageSrc && (
+        <ImageCropperModal
+          imageSrc={cropImageSrc}
+          onClose={() => setCropImageSrc(null)}
+          onCropComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 }

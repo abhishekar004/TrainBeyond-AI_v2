@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Flame, Activity, CalendarCheck } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface WelcomeBannerProps {
   user: User;
+  streak?: number;
+  consistencyScore?: number;
+  weekProgress?: { completed: number; total: number };
 }
 
-export function WelcomeBanner({ user }: WelcomeBannerProps) {
+export function WelcomeBanner({ user, streak = 0, consistencyScore = 0, weekProgress }: WelcomeBannerProps) {
   const name = user.user_metadata?.full_name?.split(' ')[0] ?? user.email?.split('@')[0] ?? 'Athlete';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -24,12 +27,30 @@ export function WelcomeBanner({ user }: WelcomeBannerProps) {
 
       <div className="relative">
         <p className="text-text-secondary text-sm mb-1">{greeting},</p>
-        <h1 className="text-text-primary font-display font-bold text-3xl mb-2">
+        <h1 className="text-text-primary font-display font-bold text-3xl mb-3">
           {name} 💪
         </h1>
-        <p className="text-text-secondary text-sm mb-5 max-w-md">
-          Ready to crush today's workout? Generate a personalized plan and start training smarter.
-        </p>
+
+        {/* Enriched status row */}
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          {weekProgress && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-accent-primary/10 border border-accent-primary/20 text-accent-primary">
+              <CalendarCheck className="w-3.5 h-3.5" />
+              Day {weekProgress.completed} of {weekProgress.total} this week
+            </span>
+          )}
+          {streak > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-orange-500/10 border border-orange-500/20 text-orange-400">
+              <Flame className="w-3.5 h-3.5" />
+              {streak}-day streak
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-accent-secondary/10 border border-accent-secondary/20 text-accent-secondary font-stat">
+            <Activity className="w-3.5 h-3.5" />
+            {consistencyScore}% consistency
+          </span>
+        </div>
+
         <Link
           to="/planner"
           id="dashboard-generate-btn"

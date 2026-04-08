@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,6 +49,7 @@ type FormData = z.infer<typeof workoutSchema>;
 interface WorkoutFormProps {
   onSubmit: (data: WorkoutFormData) => void;
   isLoading: boolean;
+  onValuesChange?: (values: Partial<WorkoutFormData>) => void;
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -98,7 +100,7 @@ function RadioGroup<T extends string>({
   );
 }
 
-export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
+export function WorkoutForm({ onSubmit, isLoading, onValuesChange }: WorkoutFormProps) {
   const {
     register,
     handleSubmit,
@@ -122,6 +124,18 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
   const watchedEquipment = watch('equipment');
   const watchedBodyFocus = watch('body_focus');
   const watchedDuration = watch('duration');
+  const watchedDays = watch('days_per_week');
+
+  useEffect(() => {
+    onValuesChange?.({
+      goal: watchedGoal,
+      experience: watchedExperience,
+      equipment: watchedEquipment,
+      body_focus: watchedBodyFocus,
+      duration: watchedDuration as WorkoutFormData['duration'],
+      days_per_week: watchedDays,
+    });
+  }, [watchedGoal, watchedExperience, watchedEquipment, watchedBodyFocus, watchedDuration, watchedDays, onValuesChange]);
 
   const handleFormSubmit = (data: FormData) => {
     onSubmit(data as WorkoutFormData);
@@ -212,6 +226,7 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
             <span key={d}>{d}</span>
           ))}
         </div>
+        <p className="text-xs text-text-secondary/60 mt-2 italic">Choose what you can sustain consistently.</p>
         <ErrorMsg msg={errors.days_per_week?.message} />
       </div>
 
@@ -246,6 +261,7 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
           onChange={(v) => setValue('equipment', v, { shouldValidate: true })}
           cols={3}
         />
+        <p className="text-xs text-text-secondary/60 mt-2 italic">We'll adapt your plan to what you actually have.</p>
         <ErrorMsg msg={errors.equipment?.message} />
       </div>
 
@@ -276,7 +292,7 @@ export function WorkoutForm({ onSubmit, isLoading }: WorkoutFormProps) {
         <FieldLabel>Injuries or Limitations <span className="text-text-secondary/50">(optional)</span></FieldLabel>
         <textarea
           {...register('injuries')}
-          placeholder="e.g. bad left knee, lower back pain, rotator cuff injury..."
+          placeholder="e.g. knee pain, shoulder discomfort, wrist strain, lower back sensitivity"
           rows={3}
           className="w-full px-4 py-3 rounded-xl bg-white/5 border border-border 
                      text-text-primary placeholder:text-text-secondary/50 text-sm
